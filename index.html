@@ -410,19 +410,32 @@
         image2: { x: 250, y: 100, width: 200, height: 150 }
     };
 
-  // FONCTIONS UTILITAIRES
-        async function loadPDFLib() {
-            return new Promise((resolve, reject) => {
-                if (window.PDFLib) return resolve(window.PDFLib);
-                
-                const script = document.createElement('script');
-                script.src = 'https://unpkg.com/pdf-lib@1.16.0/dist/pdf-lib.min.js';
-                script.onload = () => resolve(window.PDFLib);
-                script.onerror = () => reject(new Error("Échec du chargement de PDF-lib"));
-                document.head.appendChild(script);
-            });
+   // CHARGEMENT ASYNCHRONE DE PDF-LIB
+    async function loadPDFLib() {
+        try {
+            // Solution 1: Chargement depuis CDN
+            if (!window.PDFLib) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('Échec du chargement de PDF-lib'));
+                    document.head.appendChild(script);
+                });
+            }
+            
+            // Solution 2: Fallback si CDN échoue
+            if (!window.PDFLib) {
+                throw new Error('PDFLib non disponible');
+            }
+            
+            return window.PDFLib;
+        } catch (error) {
+            console.error("Erreur de chargement PDF-lib:", error);
+            showStatus("Erreur: Impossible de charger la bibliothèque PDF", "error");
+            throw error;
         }
-
+    }
 
     // FONCTION DE TÉLÉCHARGEMENT UNIVERSEL
     function downloadPDF(pdfBytes, filename) {
