@@ -437,6 +437,17 @@
         }
     }
 
+function base64ToArrayBuffer(base64) {
+            const base64Data = base64.split(',')[1] || base64;
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+
     // FONCTION DE TÉLÉCHARGEMENT UNIVERSEL
     function downloadPDF(pdfBytes, filename) {
         // 1. Création du Blob PDF
@@ -478,7 +489,7 @@
             showStatus("Génération du PDF en cours...", "");
             
             const { PDFDocument } = await PDFLib.load();
-            const pdfDoc = await PDFDocument.load(atob(PDF_TEMPLATE_BASE64));
+            const pdfDoc = await PDFDocument.load(base64ToArrayBuffer(PDF_TEMPLATE_BASE64));
             const form = pdfDoc.getForm();
             const [firstPage] = pdfDoc.getPages();
 
