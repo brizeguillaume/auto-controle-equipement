@@ -404,106 +404,62 @@
 
   <script>
     // CONFIGURATION
-    const PDF_TEMPLATE_NAME = "Autocontrole-Equipement.pdf"; // Nom du fichier PDF dans le même dossier
+    const PDF_TEMPLATE_NAME = "Autocontrole-Equipement.pdf";
     const IMAGE_POSITIONS = {
         image1: { x: 250, y: 285, width: 200, height: 150 },
         image2: { x: 250, y: 100, width: 200, height: 150 }
     };
 
-    // CHARGEMENT ASYNCHRONE DE PDF-LIB
+    // CHARGEMENT DE PDF-LIB
     async function loadPDFLib() {
         try {
-            // Solution 1: Chargement depuis CDN
             if (!window.PDFLib) {
                 await new Promise((resolve, reject) => {
                     const script = document.createElement('script');
                     script.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
                     script.onload = resolve;
-                    script.onerror = () => reject(new Error('Échec du chargement de PDF-lib'));
+                    script.onerror = reject;
                     document.head.appendChild(script);
                 });
             }
-            
-            // Solution 2: Fallback si CDN échoue
-            if (!window.PDFLib) {
-                throw new Error('PDFLib non disponible');
-            }
-            
             return window.PDFLib;
         } catch (error) {
-            console.error("Erreur de chargement PDF-lib:", error);
-            showStatus("Erreur: Impossible de charger la bibliothèque PDF", "error");
+            console.error("Erreur PDF-lib:", error);
+            showStatus("Erreur: Impossible de charger PDF-lib", "error");
             throw error;
         }
     }
 
-    // Fonction pour charger le fichier PDF
+    // CHARGEMENT DU TEMPLATE PDF
     async function loadPDFTemplate() {
         try {
             const response = await fetch(PDF_TEMPLATE_NAME);
-            if (!response.ok) {
-                throw new Error(`Erreur de chargement du fichier PDF: ${response.statusText}`);
-            }
-            const arrayBuffer = await response.arrayBuffer();
-            return arrayBuffer;
+            if (!response.ok) throw new Error("Fichier PDF introuvable");
+            return await response.arrayBuffer();
         } catch (error) {
-            console.error("Erreur lors du chargement du template PDF:", error);
-            showStatus("Erreur: Impossible de charger le template PDF", "error");
+            console.error("Erreur template:", error);
+            showStatus("Erreur: Impossible de charger le template", "error");
             throw error;
         }
     }
 
-    // FONCTION DE TÉLÉCHARGEMENT UNIVERSEL
-    function downloadPDF(pdfBytes, filename) {
-        // 1. Création du Blob PDF
-        const blob = new Blob([pdfBytes], { 
-            type: 'application/pdf' // Type MIME correct
-        });
-        const url = URL.createObjectURL(blob);
-        
-        // 2. Création du lien invisible
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-        
-        // 3. Gestion spécifique par plateforme
-        if (/Android|iPad|iPhone|iPod/i.test(navigator.userAgent)) {
-            // Comportement pour mobile
-            a.target = '_blank'; // Nécessaire pour iOS
-            if (navigator.userAgent.includes('Safari')) {
-                // iOS : ouvre dans nouvel onglet avec menu "Ouvrir avec"
-                window.open(url, '_blank');
-            } else {
-                // Android : déclenche le téléchargement directement
-                a.click();
-            }
-        } else {
-            // Comportement pour desktop - force le dialogue "Enregistrer sous"
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-        
-        // Nettoyage mémoire après 30s
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
-    }
-
-    // FONCTION DE GÉNÉRATION PDF
+    // FONCTION PRINCIPALE
     async function generatePDF() {
         try {
-            showStatus("Génération du PDF en cours...", "");
+            showStatus("Génération du PDF...", "");
             
-            // Charger PDF-lib et le template PDF
+            // Chargement des librairies
             await loadPDFLib();
-            const pdfTemplate = await loadPDFTemplate();
-            
+            const pdfBytes = await loadPDFTemplate();
             const { PDFDocument } = PDFLib;
-            const pdfDoc = await PDFDocument.load(pdfTemplate);
+            
+            // Création du document
+            const pdfDoc = await PDFDocument.load(pdfBytes);
+            const [page] = pdfDoc.getPages();
             const form = pdfDoc.getForm();
-            const [firstPage] = pdfDoc.getPages();
 
             // Remplissage des champs texte
-            const textFields = {
+            const fieldsMapping = {
                 'Texte1': 'equipmentName',
                 'Texte2': 'Niveau',
                 'Texte3': 'panneau',
@@ -518,68 +474,114 @@
                 'Texte12': 'testext'
             };
 
-            for (const [pdfField, formField] of Object.entries(textFields)) {
-                try {
-                    let value = document.getElementById(formField).value.trim();
-                    
-                    if (formField.includes('date')) {
-                        value = formatDateForPDF(value);
+            for (const [pdfField, formId] of Object.entries(fieldsMapping)) {
+                const fieldValue = document.getElementById(formId).value.trim();
+                if (fieldValue) {
+                    try {
+                        const textField = form.getTextField(pdfField);
+                        textField.setText(formId.includes('date') ? formatDateForPDF(fieldValue) : fieldValue);
+                    } catch (e) {
+                        console.warn(`Champ ${pdfField} non trouvé`);
                     }
-                    
-                    if (value) form.getTextField(pdfField).setText(value);
-                } catch (e) {
-                    console.warn(`Champ ${pdfField} non trouvé dans le PDF`);
                 }
             }
 
-            // Gestion des images
-            const photo1Data = document.getElementById('photo1Data').value;
-            const photo2Data = document.getElementById('photo2Data').value;
+            // Gestion des images - Version améliorée
+            await processImage('photo1Data', IMAGE_POSITIONS.image1, page, pdfDoc);
+            await processImage('photo2Data', IMAGE_POSITIONS.image2, page, pdfDoc);
 
-            if (photo1Data) {
-                try {
-                    const image = await pdfDoc.embedJpg(photo1Data);
-                    firstPage.drawImage(image, IMAGE_POSITIONS.image1);
-                } catch (e) {
-                    console.warn("Erreur photo 1:", e);
-                }
-            }
-
-            if (photo2Data) {
-                try {
-                    const image = await pdfDoc.embedJpg(photo2Data);
-                    firstPage.drawImage(image, IMAGE_POSITIONS.image2);
-                } catch (e) {
-                    console.warn("Erreur photo 2:", e);
-                }
-            }
-
-            const pdfBytes = await pdfDoc.save();
-            const equipmentName = document.getElementById('equipmentName').value.trim();
-            downloadPDF(pdfBytes, `Rapport_${equipmentName || 'Sans-nom'}.pdf`);
+            // Sauvegarde et téléchargement
+            const finalPdfBytes = await pdfDoc.save();
+            const filename = generateFilename();
+            downloadPDF(finalPdfBytes, filename);
             
-            showStatus("PDF prêt à être enregistré", "success");
+            showStatus("PDF généré avec succès!", "success");
         } catch (error) {
-            console.error("Erreur:", error);
+            console.error("Erreur génération:", error);
             showStatus(`Erreur: ${error.message}`, "error");
         }
     }
 
+    // NOUVELLE FONCTION POUR TRAITER LES IMAGES
+    async function processImage(photoDataId, position, page, pdfDoc) {
+        const photoData = document.getElementById(photoDataId).value;
+        if (!photoData) return;
+
+        try {
+            // Extraction du type MIME et des données base64
+            const matches = photoData.match(/^data:(image\/(\w+));base64,(.*)$/);
+            if (!matches || matches.length < 4) {
+                throw new Error("Format d'image non valide");
+            }
+
+            const mimeType = matches[1];
+            const base64Data = matches[3];
+            
+            // Conversion en Uint8Array
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // Embed selon le type d'image
+            let image;
+            if (mimeType === 'image/jpeg') {
+                image = await pdfDoc.embedJpg(bytes);
+            } else if (mimeType === 'image/png') {
+                image = await pdfDoc.embedPng(bytes);
+            } else {
+                throw new Error("Type d'image non supporté");
+            }
+
+            // Dessin sur la page
+            page.drawImage(image, {
+                x: position.x,
+                y: position.y,
+                width: position.width,
+                height: position.height,
+            });
+
+        } catch (error) {
+            console.error(`Erreur image ${photoDataId}:`, error);
+            showStatus(`Erreur avec l'image ${photoDataId.replace('Data', '')}`, "warning");
+        }
+    }
+
     // FONCTIONS UTILITAIRES
+    function generateFilename() {
+        const name = document.getElementById('equipmentName').value.trim() || 'Sans-nom';
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        return `Rapport_${name}_${date}.pdf`;
+    }
+
     function formatDateForPDF(dateString) {
         if (!dateString) return '';
         const parts = dateString.split('-');
-        if (parts.length === 3) {
-            return `${parts[2]}/${parts[1]}/${parts[0]}`; // Format DD/MM/YYYY
-        }
-        return dateString;
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
+    }
+
+    function downloadPDF(pdfBytes, filename) {
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     }
 
     function showStatus(message, type) {
         const statusEl = document.getElementById('status');
-        statusEl.textContent = message;
-        statusEl.className = `status status-${type}`;
-        setTimeout(() => statusEl.textContent = '', 3000);
+        if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.className = `status status-${type}`;
+            setTimeout(() => statusEl.textContent = '', 3000);
+        }
     }
 
     function resetForm() {
