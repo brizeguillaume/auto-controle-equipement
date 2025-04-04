@@ -402,7 +402,7 @@
         </div>
     </div>
 
-  <script>
+<script>
     // CONFIGURATION
     const PDF_TEMPLATE_NAME = "Autocontrole-Equipement.pdf";
     const IMAGE_POSITIONS = {
@@ -493,7 +493,7 @@
             // Sauvegarde et téléchargement
             const finalPdfBytes = await pdfDoc.save();
             const filename = generateFilename();
-            downloadPDF(finalPdfBytes, filename);
+            await downloadPDF(finalPdfBytes, filename);
             
             showStatus("PDF généré avec succès!", "success");
         } catch (error) {
@@ -561,9 +561,51 @@
         return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
     }
 
-    function downloadPDF(pdfBytes, filename) {
+    async function downloadPDF(pdfBytes, filename) {
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
+        const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            // Comportement pour mobile - ouverture dans une nouvelle fenêtre
+            const newWindow = window.open(url, '_blank');
+            if (!newWindow) {
+                // Fallback si popup bloqué
+                forceDownload(url, filename);
+            }
+        } else {
+            // Comportement pour desktop - boîte de dialogue d'enregistrement
+            try {
+                if ('showSaveFilePicker' in window) {
+                    // Méthode moderne (Chrome, Edge, Opera)
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [{
+                            description: 'Fichiers PDF',
+                            accept: { 'application/pdf': ['.pdf'] },
+                        }],
+                    });
+                    
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    
+                    showStatus("PDF enregistré avec succès!", "success");
+                } else {
+                    // Fallback pour les navigateurs ne supportant pas showSaveFilePicker
+                    forceDownload(url, filename);
+                }
+            } catch (err) {
+                console.error("Erreur lors de l'enregistrement:", err);
+                if (err.name !== 'AbortError') {
+                    // Si l'utilisateur n'a pas annulé manuellement
+                    forceDownload(url, filename);
+                }
+            }
+        }
+    }
+
+    function forceDownload(url, filename) {
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
