@@ -261,6 +261,52 @@
         }
     </style>
 </head>
+<script>
+// Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW enregistré'))
+      .catch(err => console.log('Erreur SW:', err));
+  });
+}
+
+// Gestion de l'installation
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallButton();
+});
+
+function showInstallButton() {
+  const installBtn = document.createElement('button');
+  installBtn.textContent = 'Installer l\'app';
+  installBtn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background: #4361ee;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    z-index: 1000;
+  `;
+  installBtn.onclick = () => {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      if (choice.outcome === 'accepted') {
+        installBtn.style.display = 'none';
+      }
+      deferredPrompt = null;
+    });
+  };
+  document.body.appendChild(installBtn);
+}
+</script>
+
+
 <body>
     <div class="app-container">
         <header>
