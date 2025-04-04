@@ -567,17 +567,49 @@
         const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent);
 
         if (isMobile) {
-            // Comportement pour mobile - ouverture dans une nouvelle fenêtre
-            const newWindow = window.open(url, '_blank');
-            if (!newWindow) {
-                // Fallback si popup bloqué
+            // Essayer d'abord l'API Web Share si disponible (spécialement pour iPad)
+            if (navigator.share) {
+                try {
+                    // Convertir le Blob en File pour le partage
+                    const file = new File([blob], filename, { type: 'application/pdf' });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: 'Rapport PDF',
+                            text: 'Voici le rapport généré',
+                            files: [file]
+                        });
+                        URL.revokeObjectURL(url);
+                        return;
+                    }
+                } catch (shareError) {
+                    console.log("Partage annulé ou échoué:", shareError);
+                    // Continuer avec les autres méthodes si le partage échoue
+                }
+            }
+
+            // Méthode alternative pour mobile
+            try {
+                // Essayer d'ouvrir dans un nouvel onglet
+                const newWindow = window.open(url, '_blank');
+                
+                if (!newWindow) {
+                    // Si les popups sont bloqués, essayer le téléchargement forcé
+                    forceDownload(url, filename);
+                } else {
+                    // Sur iPad, ajouter un délai avant de révoquer l'URL
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 10000); // 10 secondes pour laisser le temps d'ouvrir
+                }
+            } catch (mobileError) {
+                console.error("Erreur mobile:", mobileError);
                 forceDownload(url, filename);
             }
         } else {
             // Comportement pour desktop - boîte de dialogue d'enregistrement
             try {
                 if ('showSaveFilePicker' in window) {
-                    // Méthode moderne (Chrome, Edge, Opera)
                     const fileHandle = await window.showSaveFilePicker({
                         suggestedName: filename,
                         types: [{
@@ -592,13 +624,11 @@
                     
                     showStatus("PDF enregistré avec succès!", "success");
                 } else {
-                    // Fallback pour les navigateurs ne supportant pas showSaveFilePicker
                     forceDownload(url, filename);
                 }
             } catch (err) {
                 console.error("Erreur lors de l'enregistrement:", err);
                 if (err.name !== 'AbortError') {
-                    // Si l'utilisateur n'a pas annulé manuellement
                     forceDownload(url, filename);
                 }
             }
