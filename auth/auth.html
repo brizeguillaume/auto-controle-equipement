@@ -1,20 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authentification en cours...</title>
+    <title>Authentification...</title>
     <script src="https://alcdn.msauth.net/browser/2.24.0/js/msal-browser.min.js"></script>
-    <script src="../auth.js"></script>
-</head>
-<body>
     <script>
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        const msalInstance = new msal.PublicClientApplication({
+            auth: {
+                clientId: "94e72251-f0b5-4a3f-9da7-7c711736b634",
+                authority: "https://login.microsoftonline.com/a3ca0e7c-ae55-4794-9ef5-fb9baac033f4"
+            }
+        });
+        
         msalInstance.handleRedirectPromise()
             .then(response => {
                 if (response) {
-                    localStorage.setItem('msalToken', response.accessToken);
-                    window.close();
+                    window.opener.postMessage({
+                        type: 'msalToken',
+                        token: response.accessToken
+                    }, '*');
                 }
+                window.close();
             });
     </script>
+</head>
+<body>
+    <p>Authentification en cours...</p>
 </body>
 </html>
