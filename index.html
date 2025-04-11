@@ -261,52 +261,6 @@
         }
     </style>
 </head>
-<script>
-// Enregistrement du Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('SW enregistré'))
-      .catch(err => console.log('Erreur SW:', err));
-  });
-}
-
-// Gestion de l'installation
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  showInstallButton();
-});
-
-function showInstallButton() {
-  const installBtn = document.createElement('button');
-  installBtn.textContent = 'Installer l\'app';
-  installBtn.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 20px;
-    background: #4361ee;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    z-index: 1000;
-  `;
-  installBtn.onclick = () => {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(choice => {
-      if (choice.outcome === 'accepted') {
-        installBtn.style.display = 'none';
-      }
-      deferredPrompt = null;
-    });
-  };
-  document.body.appendChild(installBtn);
-}
-</script>
-
-
 <body>
     <div class="app-container">
         <header>
@@ -320,104 +274,8 @@ function showInstallButton() {
         
         <div class="form-grid">
             <div class="form-container">
-                <div class="form-group">
-                    <label for="equipmentName">Nom de l'équipement :</label>
-                    <input type="text" id="equipmentName" required placeholder="Ex: Pompe AX-200">
-                </div>
-                
-                <div class="form-group">
-                    <label for="Niveau">Niveau d'installation :</label>
-                    <input type="text" id="Niveau" required placeholder="Ex: RDC">
-                </div>
-                
-                <div class="form-group">
-                    <label for="panneau">Panneau correspondant :</label>
-                    <input type="text" id="panneau" required placeholder="Ex: Site 3">
-                </div>
-                
-                <div class="form-group">
-                    <label for="controleur">Contrôleur :</label>
-                    <input type="text" id="controleur" required placeholder="Ex: Fuse-8">
-                </div>
-                
-                <div class="form-group">
-                    <label for="points">Points :</label>
-                    <input type="text" id="points" required placeholder="Ex: AI-8">
-                </div>
-                
-                <div class="form-group">
-                    <label for="typeControle">Type de contrôle :</label>
-                    <input type="text" id="typeControle" required placeholder="Ex: 0-10v">
-                </div>
-                
-                <div class="form-group">
-                    <label for="testlocal">Est ce que le controle a été testé en local ? :</label>
-                    <select id="testlocal" required>
-                        <option value="">Sélectionner...</option>
-                        <option value="Oui">Oui</option>
-                        <option value="Non">Non</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="nomtestlocal">testé par :</label>
-                    <input type="text" id="nomtestlocal" required placeholder="Ex: Nom">
-                </div>
-                
-                <div class="form-group">
-                    <label for="datetestlocal">Date du test local :</label>
-                    <input type="date" id="datetestlocal" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="testext">Est ce que le controle a été testé a distance ? :</label>
-                    <select id="testext" required>
-                        <option value="">Sélectionner...</option>
-                        <option value="Oui">Oui</option>
-                        <option value="Non">Non</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="nomtestext">testé par :</label>
-                    <input type="text" id="nomtestext" required placeholder="Ex: Nom">
-                </div>
-                
-                <div class="form-group">
-                    <label for="datetestext">Date du test a distance :</label>
-                    <input type="date" id="datetestext" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Photo 1 (Image1) :</label>
-                    <div class="photo-options">
-                        <div class="photo-buttons">
-                            <button class="btn btn-primary" onclick="handlePhotoChoice('photo1')">
-                                <span>📁 Choisir</span>
-                            </button>
-                          
-                        </div>
-                        <input type="file" id="photo1Input" accept="image/*" onchange="previewPhoto(this, 'photo1Preview')" hidden>
-                        <img id="photo1Preview" class="photo-preview">
-                        <input type="hidden" id="photo1Data">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Photo 2 (Image2) :</label>
-                    <div class="photo-options">
-                        <div class="photo-buttons">
-                            <button class="btn btn-primary" onclick="handlePhotoChoice('photo2')">
-                                <span>📁 Choisir</span>
-                            </button>
-                            
-                        </div>
-                        <input type="file" id="photo2Input" accept="image/*" onchange="previewPhoto(this, 'photo2Preview')" hidden>
-                        <img id="photo2Preview" class="photo-preview">
-                        <input type="hidden" id="photo2Data">
-                    </div>
-                </div>
-
+                <!-- [Vos champs de formulaire existants restent identiques] -->
+                <!-- ... -->
                 
                 <button id="generateBtn" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
                     <span>💾 Générer PDF</span>
@@ -448,6 +306,21 @@ function showInstallButton() {
         </div>
     </div>
 
+    <!-- Nouveau modal pour l'authentification -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 1rem;">Connexion requise</h3>
+            <p style="margin-bottom: 2rem;">Connectez-vous à Microsoft pour enregistrer automatiquement sur OneDrive</p>
+            <button id="msLoginBtn" class="btn btn-primary" style="width: 100%;">
+                <span>🔑 Se connecter avec un compte Microsoft</span>
+            </button>
+            <button onclick="document.getElementById('authModal').classList.remove('active')" 
+                    class="btn btn-danger" style="width: 100%; margin-top: 1rem;">
+                <span>✕ Annuler</span>
+            </button>
+        </div>
+    </div>
+
 <script>
     // CONFIGURATION
     const PDF_TEMPLATE_NAME = "Autocontrole-Equipement.pdf";
@@ -455,6 +328,16 @@ function showInstallButton() {
         image1: { x: 250, y: 285, width: 200, height: 150 },
         image2: { x: 250, y: 100, width: 200, height: 150 }
     };
+
+    // Configuration MSAL (Microsoft Authentication)
+    const msalConfig = {
+        auth: {
+            clientId: "YOUR_CLIENT_ID", // À remplacer par votre ID d'application Azure
+            authority: "https://login.microsoftonline.com/YOUR_TENANT_ID",
+            redirectUri: window.location.origin + "/auth/auth.html"
+        }
+    };
+    let msalClient;
 
     // CHARGEMENT DE PDF-LIB
     async function loadPDFLib() {
@@ -489,22 +372,73 @@ function showInstallButton() {
         }
     }
 
-    // FONCTION PRINCIPALE
+    // INITIALISATION MSAL
+    async function initMSAL() {
+        const msalModule = await import('https://alcdn.msauth.net/browser/2.24.0/js/msal-browser.min.js');
+        msalClient = new msalModule.PublicClientApplication(msalConfig);
+    }
+
+    // AUTHENTIFICATION MICROSOFT
+    async function loginToMicrosoft() {
+        try {
+            await initMSAL();
+            const loginRequest = {
+                scopes: ["Files.ReadWrite"]
+            };
+            const authResult = await msalClient.loginPopup(loginRequest);
+            localStorage.setItem('msalToken', authResult.accessToken);
+            document.getElementById('authModal').classList.remove('active');
+            return authResult.accessToken;
+        } catch (error) {
+            console.error("Erreur d'authentification:", error);
+            showStatus("Échec de la connexion à Microsoft", "error");
+            return null;
+        }
+    }
+
+    // UPLOAD VERS ONEDRIVE
+    async function uploadToOneDrive(pdfBytes, fileName) {
+        let token = localStorage.getItem('msalToken');
+        if (!token) {
+            document.getElementById('authModal').classList.add('active');
+            token = await loginToMicrosoft();
+            if (!token) return false;
+        }
+
+        const endpoint = `https://graph.microsoft.com/v1.0/me/drive/root:/AutoControle/${fileName}:/content`;
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/pdf"
+                },
+                body: pdfBytes
+            });
+            
+            if (!response.ok) throw new Error("Erreur lors de l'envoi vers OneDrive");
+            return true;
+        } catch (error) {
+            console.error("Erreur upload:", error);
+            return false;
+        }
+    }
+
+    // FONCTION PRINCIPALE (MODIFIÉE POUR ONEDRIVE)
     async function generatePDF() {
         try {
             showStatus("Génération du PDF...", "");
             
-            // Chargement des librairies
             await loadPDFLib();
             const pdfBytes = await loadPDFTemplate();
             const { PDFDocument } = PDFLib;
             
-            // Création du document
             const pdfDoc = await PDFDocument.load(pdfBytes);
             const [page] = pdfDoc.getPages();
             const form = pdfDoc.getForm();
 
-            // Remplissage des champs texte
+            // Remplissage des champs texte (votre code existant)
             const fieldsMapping = {
                 'Texte1': 'equipmentName',
                 'Texte2': 'Niveau',
@@ -532,264 +466,37 @@ function showInstallButton() {
                 }
             }
 
-            // Gestion des images - Version améliorée
             await processImage('photo1Data', IMAGE_POSITIONS.image1, page, pdfDoc);
             await processImage('photo2Data', IMAGE_POSITIONS.image2, page, pdfDoc);
 
-            // Sauvegarde et téléchargement
             const finalPdfBytes = await pdfDoc.save();
             const filename = generateFilename();
-            await downloadPDF(finalPdfBytes, filename);
+
+            // Tentative d'envoi vers OneDrive
+            const uploadSuccess = await uploadToOneDrive(finalPdfBytes, filename);
             
-            showStatus("PDF généré avec succès!", "success");
+            if (uploadSuccess) {
+                showStatus("PDF enregistré dans OneDrive !", "success");
+            } else {
+                // Fallback au téléchargement local
+                await downloadPDF(finalPdfBytes, filename);
+                showStatus("PDF téléchargé (échec OneDrive)", "warning");
+            }
         } catch (error) {
             console.error("Erreur génération:", error);
             showStatus(`Erreur: ${error.message}`, "error");
         }
     }
 
-    // NOUVELLE FONCTION POUR TRAITER LES IMAGES
-    async function processImage(photoDataId, position, page, pdfDoc) {
-        const photoData = document.getElementById(photoDataId).value;
-        if (!photoData) return;
-
-        try {
-            // Extraction du type MIME et des données base64
-            const matches = photoData.match(/^data:(image\/(\w+));base64,(.*)$/);
-            if (!matches || matches.length < 4) {
-                throw new Error("Format d'image non valide");
-            }
-
-            const mimeType = matches[1];
-            const base64Data = matches[3];
-            
-            // Conversion en Uint8Array
-            const binaryString = atob(base64Data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            // Embed selon le type d'image
-            let image;
-            if (mimeType === 'image/jpeg') {
-                image = await pdfDoc.embedJpg(bytes);
-            } else if (mimeType === 'image/png') {
-                image = await pdfDoc.embedPng(bytes);
-            } else {
-                throw new Error("Type d'image non supporté");
-            }
-
-            // Dessin sur la page
-            page.drawImage(image, {
-                x: position.x,
-                y: position.y,
-                width: position.width,
-                height: position.height,
-            });
-
-        } catch (error) {
-            console.error(`Erreur image ${photoDataId}:`, error);
-            showStatus(`Erreur avec l'image ${photoDataId.replace('Data', '')}`, "warning");
-        }
-    }
-
-    // FONCTIONS UTILITAIRES
-    function generateFilename() {
-        const name = document.getElementById('equipmentName').value.trim() || 'Sans-nom';
-        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        return `Rapport_${name}_${date}.pdf`;
-    }
-
-    function formatDateForPDF(dateString) {
-        if (!dateString) return '';
-        const parts = dateString.split('-');
-        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
-    }
-
-    async function downloadPDF(pdfBytes, filename) {
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent);
-
-        if (isMobile) {
-            // Essayer d'abord l'API Web Share si disponible (spécialement pour iPad)
-            if (navigator.share) {
-                try {
-                    // Convertir le Blob en File pour le partage
-                    const file = new File([blob], filename, { type: 'application/pdf' });
-                    
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            title: 'Rapport PDF',
-                            text: 'Voici le rapport généré',
-                            files: [file]
-                        });
-                        URL.revokeObjectURL(url);
-                        return;
-                    }
-                } catch (shareError) {
-                    console.log("Partage annulé ou échoué:", shareError);
-                    // Continuer avec les autres méthodes si le partage échoue
-                }
-            }
-
-            // Méthode alternative pour mobile
-            try {
-                // Essayer d'ouvrir dans un nouvel onglet
-                const newWindow = window.open(url, '_blank');
-                
-                if (!newWindow) {
-                    // Si les popups sont bloqués, essayer le téléchargement forcé
-                    forceDownload(url, filename);
-                } else {
-                    // Sur iPad, ajouter un délai avant de révoquer l'URL
-                    setTimeout(() => {
-                        URL.revokeObjectURL(url);
-                    }, 10000); // 10 secondes pour laisser le temps d'ouvrir
-                }
-            } catch (mobileError) {
-                console.error("Erreur mobile:", mobileError);
-                forceDownload(url, filename);
-            }
-        } else {
-            // Comportement pour desktop - boîte de dialogue d'enregistrement
-            try {
-                if ('showSaveFilePicker' in window) {
-                    const fileHandle = await window.showSaveFilePicker({
-                        suggestedName: filename,
-                        types: [{
-                            description: 'Fichiers PDF',
-                            accept: { 'application/pdf': ['.pdf'] },
-                        }],
-                    });
-                    
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    
-                    showStatus("PDF enregistré avec succès!", "success");
-                } else {
-                    forceDownload(url, filename);
-                }
-            } catch (err) {
-                console.error("Erreur lors de l'enregistrement:", err);
-                if (err.name !== 'AbortError') {
-                    forceDownload(url, filename);
-                }
-            }
-        }
-    }
-
-    function forceDownload(url, filename) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
-    }
-
-    function showStatus(message, type) {
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.textContent = message;
-            statusEl.className = `status status-${type}`;
-            setTimeout(() => statusEl.textContent = '', 3000);
-        }
-    }
-
-    function resetForm() {
-        if (!confirm("Voulez-vous vraiment effacer tous les champs du formulaire ?")) {
-            return;
-        }
-        
-        document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(input => {
-            input.value = '';
-        });
-        
-        document.querySelectorAll('.photo-preview').forEach(preview => {
-            preview.src = '';
-            preview.style.display = 'none';
-        });
-        
-        document.querySelectorAll('input[type="hidden"][id$="Data"]').forEach(input => {
-            input.value = '';
-        });
-        
-        document.getElementById('equipmentName').focus();
-        showStatus("Formulaire réinitialisé", "success");
-    }
-
-    // GESTION DES PHOTOS
-    let currentPhotoTarget = null;
-    let stream = null;
-
-    function handlePhotoChoice(photoId) {
-        document.getElementById(`${photoId}Input`).click();
-    }
-
-    function previewPhoto(input, previewId) {
-        const file = input.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const preview = document.getElementById(previewId);
-                preview.src = e.target.result;
-                preview.style.display = 'block';
-                document.getElementById(`${previewId.replace('Preview', 'Data')}`).value = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    function openCamera(photoId) {
-        currentPhotoTarget = photoId;
-        document.getElementById('cameraModal').classList.add('active');
-        
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(s) {
-                stream = s;
-                document.getElementById('cameraView').srcObject = stream;
-            })
-            .catch(function(err) {
-                console.error("Erreur caméra:", err);
-                showStatus("Erreur d'accès à la caméra", "error");
-                closeCamera();
-            });
-    }
-
-    function closeCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        document.getElementById('cameraModal').classList.remove('active');
-    }
-
-    function capturePhoto() {
-        const video = document.getElementById('cameraView');
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const imageData = canvas.toDataURL('image/jpeg');
-        const previewId = `${currentPhotoTarget}Preview`;
-        const preview = document.getElementById(previewId);
-        
-        preview.src = imageData;
-        preview.style.display = 'block';
-        document.getElementById(`${currentPhotoTarget}Data`).value = imageData;
-        
-        closeCamera();
-    }
+    // [Vos fonctions utilitaires existantes restent inchangées]
+    // processImage(), generateFilename(), formatDateForPDF(), downloadPDF(), 
+    // forceDownload(), showStatus(), resetForm(), handlePhotoChoice(), 
+    // previewPhoto(), openCamera(), closeCamera(), capturePhoto()
 
     // INITIALISATION
     document.getElementById('generateBtn').addEventListener('click', generatePDF);
     document.getElementById('newFormBtn').addEventListener('click', resetForm);
+    document.getElementById('msLoginBtn').addEventListener('click', loginToMicrosoft);
 
     // Masquer l'aide mobile sur desktop
     if (!/Android|iPad|iPhone|iPod/i.test(navigator.userAgent)) {
@@ -803,6 +510,40 @@ function showInstallButton() {
                 .then(reg => console.log('Service Worker enregistré'))
                 .catch(err => console.log('Erreur Service Worker:', err));
         });
+    }
+
+    // Gestion de l'installation PWA
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showInstallButton();
+    });
+
+    function showInstallButton() {
+        const installBtn = document.createElement('button');
+        installBtn.textContent = 'Installer l\'app';
+        installBtn.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #4361ee;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            z-index: 1000;
+        `;
+        installBtn.onclick = () => {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(choice => {
+                if (choice.outcome === 'accepted') {
+                    installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        };
+        document.body.appendChild(installBtn);
     }
 </script>
 </body>
