@@ -1,7 +1,7 @@
 const msalConfig = {
     auth: {
         clientId: "94e72251-f0b5-4a3f-9da7-7c711736b634",
-        authority: "https://login.microsoftonline.com/VOTRE_TENANT_ID",
+        authority: "https://login.microsoftonline.com/a3ca0e7c-ae55-4794-9ef5-fb9baac033f4",
         redirectUri: window.location.origin + "/auth/auth.html"
     }
 };
