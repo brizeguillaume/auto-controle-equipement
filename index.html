@@ -492,6 +492,244 @@
     // processImage(), generateFilename(), formatDateForPDF(), downloadPDF(), 
     // forceDownload(), showStatus(), resetForm(), handlePhotoChoice(), 
     // previewPhoto(), openCamera(), closeCamera(), capturePhoto()
+    // NOUVELLE FONCTION POUR TRAITER LES IMAGES
+    async function processImage(photoDataId, position, page, pdfDoc) {
+        const photoData = document.getElementById(photoDataId).value;
+        if (!photoData) return;
+
+        try {
+            // Extraction du type MIME et des données base64
+            const matches = photoData.match(/^data:(image\/(\w+));base64,(.*)$/);
+            if (!matches || matches.length < 4) {
+                throw new Error("Format d'image non valide");
+            }
+
+            const mimeType = matches[1];
+            const base64Data = matches[3];
+            
+            // Conversion en Uint8Array
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // Embed selon le type d'image
+            let image;
+            if (mimeType === 'image/jpeg') {
+                image = await pdfDoc.embedJpg(bytes);
+            } else if (mimeType === 'image/png') {
+                image = await pdfDoc.embedPng(bytes);
+            } else {
+                throw new Error("Type d'image non supporté");
+            }
+
+            // Dessin sur la page
+            page.drawImage(image, {
+                x: position.x,
+                y: position.y,
+                width: position.width,
+                height: position.height,
+            });
+
+        } catch (error) {
+            console.error(`Erreur image ${photoDataId}:`, error);
+            showStatus(`Erreur avec l'image ${photoDataId.replace('Data', '')}`, "warning");
+        }
+    }
+
+    // FONCTIONS UTILITAIRES
+    function generateFilename() {
+        const name = document.getElementById('equipmentName').value.trim() || 'Sans-nom';
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        return `Rapport_${name}_${date}.pdf`;
+    }
+
+    function formatDateForPDF(dateString) {
+        if (!dateString) return '';
+        const parts = dateString.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
+    }
+
+    async function downloadPDF(pdfBytes, filename) {
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            // Essayer d'abord l'API Web Share si disponible (spécialement pour iPad)
+            if (navigator.share) {
+                try {
+                    // Convertir le Blob en File pour le partage
+                    const file = new File([blob], filename, { type: 'application/pdf' });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: 'Rapport PDF',
+                            text: 'Voici le rapport généré',
+                            files: [file]
+                        });
+                        URL.revokeObjectURL(url);
+                        return;
+                    }
+                } catch (shareError) {
+                    console.log("Partage annulé ou échoué:", shareError);
+                    // Continuer avec les autres méthodes si le partage échoue
+                }
+            }
+
+            // Méthode alternative pour mobile
+            try {
+                // Essayer d'ouvrir dans un nouvel onglet
+                const newWindow = window.open(url, '_blank');
+                
+                if (!newWindow) {
+                    // Si les popups sont bloqués, essayer le téléchargement forcé
+                    forceDownload(url, filename);
+                } else {
+                    // Sur iPad, ajouter un délai avant de révoquer l'URL
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                    }, 10000); // 10 secondes pour laisser le temps d'ouvrir
+                }
+            } catch (mobileError) {
+                console.error("Erreur mobile:", mobileError);
+                forceDownload(url, filename);
+            }
+        } else {
+            // Comportement pour desktop - boîte de dialogue d'enregistrement
+            try {
+                if ('showSaveFilePicker' in window) {
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [{
+                            description: 'Fichiers PDF',
+                            accept: { 'application/pdf': ['.pdf'] },
+                        }],
+                    });
+                    
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    
+                    showStatus("PDF enregistré avec succès!", "success");
+                } else {
+                    forceDownload(url, filename);
+                }
+            } catch (err) {
+                console.error("Erreur lors de l'enregistrement:", err);
+                if (err.name !== 'AbortError') {
+                    forceDownload(url, filename);
+                }
+            }
+        }
+    }
+
+    function forceDownload(url, filename) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+
+    function showStatus(message, type) {
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.className = `status status-${type}`;
+            setTimeout(() => statusEl.textContent = '', 3000);
+        }
+    }
+
+    function resetForm() {
+        if (!confirm("Voulez-vous vraiment effacer tous les champs du formulaire ?")) {
+            return;
+        }
+        
+        document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(input => {
+            input.value = '';
+        });
+        
+        document.querySelectorAll('.photo-preview').forEach(preview => {
+            preview.src = '';
+            preview.style.display = 'none';
+        });
+        
+        document.querySelectorAll('input[type="hidden"][id$="Data"]').forEach(input => {
+            input.value = '';
+        });
+        
+        document.getElementById('equipmentName').focus();
+        showStatus("Formulaire réinitialisé", "success");
+    }
+
+    // GESTION DES PHOTOS
+    let currentPhotoTarget = null;
+    let stream = null;
+
+    function handlePhotoChoice(photoId) {
+        document.getElementById(`${photoId}Input`).click();
+    }
+
+    function previewPhoto(input, previewId) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById(previewId);
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                document.getElementById(`${previewId.replace('Preview', 'Data')}`).value = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function openCamera(photoId) {
+        currentPhotoTarget = photoId;
+        document.getElementById('cameraModal').classList.add('active');
+        
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(s) {
+                stream = s;
+                document.getElementById('cameraView').srcObject = stream;
+            })
+            .catch(function(err) {
+                console.error("Erreur caméra:", err);
+                showStatus("Erreur d'accès à la caméra", "error");
+                closeCamera();
+            });
+    }
+
+    function closeCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('cameraModal').classList.remove('active');
+    }
+
+    function capturePhoto() {
+        const video = document.getElementById('cameraView');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = canvas.toDataURL('image/jpeg');
+        const previewId = `${currentPhotoTarget}Preview`;
+        const preview = document.getElementById(previewId);
+        
+        preview.src = imageData;
+        preview.style.display = 'block';
+        document.getElementById(`${currentPhotoTarget}Data`).value = imageData;
+        
+        closeCamera();
+    }
 
     // INITIALISATION
     document.getElementById('generateBtn').addEventListener('click', generatePDF);
