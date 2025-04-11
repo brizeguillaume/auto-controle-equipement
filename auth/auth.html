@@ -1,1 +1,20 @@
-
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentification en cours...</title>
+    <script src="https://alcdn.msauth.net/browser/2.24.0/js/msal-browser.min.js"></script>
+    <script src="../auth.js"></script>
+</head>
+<body>
+    <script>
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        msalInstance.handleRedirectPromise()
+            .then(response => {
+                if (response) {
+                    localStorage.setItem('msalToken', response.accessToken);
+                    window.close();
+                }
+            });
+    </script>
+</body>
+</html>
