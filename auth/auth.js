@@ -6,18 +6,7 @@ const msalConfig = {
     }
 };
 
-async function login() {
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
-    const loginRequest = {
-        scopes: ["Files.ReadWrite"]
-    };
-    
-    try {
-        await msalInstance.loginRedirect(loginRequest);
-    } catch (err) {
-        console.error("Erreur:", err);
-    }
-}
+
 // Dans auth.js
 async function getToken() {
     const msalInstance = new msal.PublicClientApplication(msalConfig);
